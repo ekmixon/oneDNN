@@ -21,10 +21,12 @@ class Writer:
         self.__file = None
 
     def print(self, string, type):
-        if type == 'WARN':
-            print(f"{type}: {string}")
-        if type == 'INFO':
-            if self.__verbose_level > 0:
-                print(string)
-        if type == 'STDIO':
+        if (
+            type == 'INFO'
+            and self.__verbose_level > 0
+            or type != 'INFO'
+            and type == 'STDIO'
+        ):
             print(string)
+        elif type != 'INFO' and type == 'WARN':
+            print(f"{type}: {string}")

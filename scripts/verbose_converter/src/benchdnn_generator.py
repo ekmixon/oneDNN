@@ -16,9 +16,8 @@
 
 
 def everyone_is(list, value='None'):
-    if [value == 'None']:
-        value = list[0]
-    return [e for e in list if e != value] == []
+    value = list[0]
+    return not [e for e in list if e != value]
 
 
 primitives_with_algs = ('binary', 'convolution', 'deconvolution', 'eltwise',
@@ -33,7 +32,7 @@ def alg_remove_primitive(alg):
 
 
 def convert_driver(prop_kind):
-    driver = {
+    return {
         'batch_normalization': 'bnorm',
         'binary': 'binary',
         'concat': 'concat',
@@ -55,7 +54,6 @@ def convert_driver(prop_kind):
         'softmax': 'softmax',
         'sum': 'sum',
     }.get(prop_kind)
-    return driver
 
 
 def convert_engine(engine):
@@ -76,87 +74,84 @@ def convert_dir(entry):
         return ''
 
     found_bias = [
-        e for e in entry['mds']
-        if 'bia' == e['arg'] and e['data_type'] != 'undef'
+        e
+        for e in entry['mds']
+        if e['arg'] == 'bia' and e['data_type'] != 'undef'
     ]
+
     dir = 'FWD_B' if 'FWD' in dir and found_bias else dir
     dir = 'BWD_WB' if dir == 'BWD_W' and found_bias else dir
-    if entry['prim_kind'] == 'rnn':
-        return f"--prop={dir}"
-    else:
-        return f"--dir={dir}"
+    return f"--prop={dir}" if entry['prim_kind'] == 'rnn' else f"--dir={dir}"
 
 
 def convert_alg(entry):
     alg = entry['alg_kind']
     pk = entry['prim_kind']
-    if alg:
-        if pk == 'convolution':
-            str = ''
-            alg = alg_remove_primitive(alg)
-            algs = {'winograd': 'WINO', 'direct': 'direct'}
-            alg = algs.get(alg)
-            if alg != None:
-                str = f"--alg={alg}"
-            return str
-        if pk == 'eltwise':
-            alg, alpha, beta = alg.split(' ')
-            alpha = alpha.split(':')[1]
-            beta = beta.split(':')[1]
-            alg += f" --alpha={alpha} --beta={beta}"
-            return f"--alg={alg}"
-        elif pk == 'concat':
-            axis = alg[len('axis:'):]
-            return f"--axis={axis}"
-        elif pk in ['batch_normalization', 'layer_normalization']:
-            flags = alg[len('flags:'):]
-            return f"--flags={flags}"
-        elif pk == 'lrn':
-            str = ''
-            alg = alg_remove_primitive(alg)
-            algs = {'across_channels': 'ACROSS', 'within_channel': 'WITHIN'}
-            alg = algs.get(alg)
-            if alg != None:
-                str = f"--alg={alg}"
-            return str
-        elif pk == 'reduction':
-            alg, p, eps = alg.split(' ')
-            p = p.split(':')[1]
-            eps = eps.split(':')[1]
-            alg += f" --p={p} --eps={eps}"
-            return f"--alg={alg}"
-        elif pk == 'rnn':
-            str = ''
-            alg, dir, act = alg.split(' ')
-            algs = {
-                'vanilla_rnn': 'VANILLA_RNN',
-                'vanilla_lstm': 'VANILLA_LSTM'
-            }
-            alg = algs.get(alg)
-            if alg != None:
-                str = f"--alg={alg}"
-            return str
-        elif pk == 'shuffle':
-            axis, group = alg.split(' ')
-            axis = axis[len('axis:'):]
-            group = group[len('group:'):]
-            return f"--axis={axis} --group={group}"
-        elif pk == 'softmax':
-            alg, axis = alg.split(' ')
-            axis = axis[len('axis:'):]
-            return f"--alg={alg} --axis={axis}"
-        elif pk == 'pooling':
-            return f"--alg={alg}"
-        else:
-            alg = alg_remove_primitive(alg)
-            return f"--alg={alg}"
-    else:
+    if not alg:
         return ''
+    if pk == 'convolution':
+        str = ''
+        alg = alg_remove_primitive(alg)
+        algs = {'winograd': 'WINO', 'direct': 'direct'}
+        alg = algs.get(alg)
+        if alg != None:
+            str = f"--alg={alg}"
+        return str
+    if pk == 'eltwise':
+        alg, alpha, beta = alg.split(' ')
+        alpha = alpha.split(':')[1]
+        beta = beta.split(':')[1]
+        alg += f" --alpha={alpha} --beta={beta}"
+        return f"--alg={alg}"
+    elif pk == 'concat':
+        axis = alg[len('axis:'):]
+        return f"--axis={axis}"
+    elif pk in ['batch_normalization', 'layer_normalization']:
+        flags = alg[len('flags:'):]
+        return f"--flags={flags}"
+    elif pk == 'lrn':
+        str = ''
+        alg = alg_remove_primitive(alg)
+        algs = {'across_channels': 'ACROSS', 'within_channel': 'WITHIN'}
+        alg = algs.get(alg)
+        if alg != None:
+            str = f"--alg={alg}"
+        return str
+    elif pk == 'reduction':
+        alg, p, eps = alg.split(' ')
+        p = p.split(':')[1]
+        eps = eps.split(':')[1]
+        alg += f" --p={p} --eps={eps}"
+        return f"--alg={alg}"
+    elif pk == 'rnn':
+        str = ''
+        alg, dir, act = alg.split(' ')
+        algs = {
+            'vanilla_rnn': 'VANILLA_RNN',
+            'vanilla_lstm': 'VANILLA_LSTM'
+        }
+        alg = algs.get(alg)
+        if alg != None:
+            str = f"--alg={alg}"
+        return str
+    elif pk == 'shuffle':
+        axis, group = alg.split(' ')
+        axis = axis[len('axis:'):]
+        group = group[len('group:'):]
+        return f"--axis={axis} --group={group}"
+    elif pk == 'softmax':
+        alg, axis = alg.split(' ')
+        axis = axis[len('axis:'):]
+        return f"--alg={alg} --axis={axis}"
+    elif pk == 'pooling':
+        return f"--alg={alg}"
+    else:
+        alg = alg_remove_primitive(alg)
+        return f"--alg={alg}"
 
 
 def convert_bias_mask(mds):
-    bia_mds = [md for md in mds if md['arg'] == 'bia']
-    if len(bia_mds) != 0:
+    if bia_mds := [md for md in mds if md['arg'] == 'bia']:
         bia_md = bia_mds[0]
         flags = bia_md['flags']['value'].split('_')
         if len(flags) > 1:
@@ -190,10 +185,10 @@ def convert_dts(mds, prim_kind):
     def convert_dts_cfg_with_bias(mds):
         cfg = convert_dts_cfg(mds)
         mds_bias = [md for md in mds if 'bia' in md['arg']]
-        if len(mds_bias) != 0:
+        if mds_bias:
             md_bias = mds_bias[0]
             bias_dt = md_bias['data_type']
-            cfg += ' ' + f"--bia_dt={bias_dt}"
+            cfg += f" --bia_dt={bias_dt}"
         return cfg
 
     def convert_dts_cfg_pool(mds):
@@ -261,10 +256,7 @@ def convert_dts(mds, prim_kind):
     }
 
     convert = convert_dts.get(prim_kind)
-    if convert != None:
-        return convert(mds)
-    # FIXME: Error handling. Throw an error if get() is used, but None returned
-    return ''
+    return convert(mds) if convert != None else ''
 
 
 def convert_tags(mds, prim_kind):
@@ -352,9 +344,7 @@ def convert_tags(mds, prim_kind):
     }
 
     convert = cvt_tags.get(prim_kind)
-    if convert:
-        return convert(mds)
-    return ''
+    return convert(mds) if convert else ''
 
 
 def convert_flags(mds, prim_kind):
@@ -364,18 +354,15 @@ def convert_flags(mds, prim_kind):
             flag_fields = md.get('flags')
             if flag_fields != None:
                 cvt = {'s8_comp_mask': 's8s8_comp', 'zp_comp_mask': 'zp_comp'}
-                for f in cvt.keys():
+                for f in cvt:
                     value = flag_fields.get(f)
                     if value != None:
-                        benchdnn_flag = cvt[f] + ':' + value
+                        benchdnn_flag = f'{cvt[f]}:{value}'
                         if flag == '':
                             flag = benchdnn_flag
                         else:
-                            flag += '+' + benchdnn_flag
-            if flag != '':
-                return f"--{prefix}flag={flag}"
-            else:
-                return ''
+                            flag += f'+{benchdnn_flag}'
+            return f"--{prefix}flag={flag}" if flag != '' else ''
 
         flags = ''
         # FIXME: fix benchdnn input template
@@ -388,7 +375,7 @@ def convert_flags(mds, prim_kind):
         if iflag != '':
             flags += iflag
         if oflag != '':
-            flags += ' ' + oflag
+            flags += f' {oflag}'
         return flags
 
     cvt_flags = {
@@ -396,9 +383,7 @@ def convert_flags(mds, prim_kind):
     }
 
     convert = cvt_flags.get(prim_kind)
-    if convert:
-        return convert(mds)
-    return ''
+    return convert(mds) if convert else ''
 
 
 def extract_attr(attrs, type):
@@ -421,21 +406,13 @@ def extract_attr(attrs, type):
 def convert_scale_policy(value):
     # 4 is used by batched matmul
     masks = {0: 'common', 2: 'per_oc', 4: 'per_oc'}
-    mask = masks.get(int(value))
-    if mask:
-        return mask
-    # this is a workaround for tensors with mask more than 4
-    return 'per_tensor'
+    return mask if (mask := masks.get(int(value))) else 'per_tensor'
 
 
 def convert_zp_policy(value):
     # 4 is used by batched matmul
     masks = {0: 'common', 2: 'per_dim_1', 4: 'per_dim_2'}
-    mask = masks.get(int(value))
-    if mask:
-        return mask
-    # this is a workaround for tensors with mask more than 4
-    return 'per_tensor'
+    return mask if (mask := masks.get(int(value))) else 'per_tensor'
 
 
 def convert_post_ops(post_ops):
@@ -459,11 +436,11 @@ def convert_post_ops(post_ops):
         beta = post_op['beta']
         scale = post_op['scale']
         if alpha != '1.0':
-            benchdnn_p_op += ':' + alpha
+            benchdnn_p_op += f':{alpha}'
             if beta != '0.0':
-                benchdnn_p_op += ':' + beta
+                benchdnn_p_op += f':{beta}'
                 if alpha != '1.0':
-                    benchdnn_p_op += ':' + scale
+                    benchdnn_p_op += f':{scale}'
         return benchdnn_p_op
 
     def convert_sum_post_op(post_op):
@@ -480,7 +457,7 @@ def convert_post_ops(post_ops):
         benchdnn_p_op = post_op['alg']
         if post_op['mask'] != 0:
             policy = convert_scale_policy(post_op['mask'])
-            benchdnn_p_op += ':' + policy
+            benchdnn_p_op += f':{policy}'
         return benchdnn_p_op
 
     convert = {
@@ -493,7 +470,7 @@ def convert_post_ops(post_ops):
 
     benchdnn_postops = ''
     for e in post_ops:
-        for k in convert.keys():
+        for k in convert:
             if k in e['alg']:
                 cvt = convert.get(k)
                 if benchdnn_postops != '':
@@ -507,15 +484,14 @@ def convert_oscale(oscale):
     benchdnn_oscale = convert_scale_policy(oscale['mask'])
     not_default_value = '0.5'
     value = oscale['value']
-    if value != None:
-        if value == '*':
-            value = not_default_value + '*'
-    else:
+    if value is None:
         if benchdnn_oscale != 'common':
             value = not_default_value
 
+    elif value == '*':
+        value = f'{not_default_value}*'
     if value != None:
-        benchdnn_oscale += ':' + value
+        benchdnn_oscale += f':{value}'
     return benchdnn_oscale
 
 
@@ -525,15 +501,15 @@ def convert_scales(scales):
     for arg in scales.keys():
         s = scales[arg]
         policy = convert_scale_policy(s['mask'])
-        benchdnn_scale = arg + ':' + policy
+        benchdnn_scale = f'{arg}:{policy}'
         value = s['value']
         # benchdnn requires user to pass a value
-        if value == None:
+        if value is None:
             value = not_default_value
         # benchdnn doesn't allow user to pass * without an actual value
         if value == '*':
-            value = not_default_value + '*'
-        benchdnn_scale += ':' + value
+            value = f'{not_default_value}*'
+        benchdnn_scale += f':{value}'
         res.append(benchdnn_scale)
     return '+'.join(res)
 
@@ -544,17 +520,17 @@ def convert_zero_points(zero_points):
     for arg in zero_points.keys():
         zp = zero_points[arg]
         policy = convert_zp_policy(zp['mask'])
-        benchdnn_zp = arg + ':' + policy
+        benchdnn_zp = f'{arg}:{policy}'
         value = zp['value']
         if policy != 'common':
             value = '*'
         # benchdnn requires user to pass a value
-        if value == None:
+        if value is None:
             value = not_default_value
         # benchdnn doesn't allow user to pass * without an actual value
         if value == '*':
-            value = not_default_value + '*'
-        benchdnn_zp += ':' + value
+            value = f'{not_default_value}*'
+        benchdnn_zp += f':{value}'
         res.append(benchdnn_zp)
     return '+'.join(res)
 
@@ -573,12 +549,12 @@ def convert_attrs(exts):
     }
 
     benchdnn_attrs = ''
-    for e in converters.keys():
+    for e in converters:
         attr = exts.get(e)
         if attr != None:
             if benchdnn_attrs != '':
                 benchdnn_attrs += ' '
-            benchdnn_attrs += f"--{e}=" + converters[e](attr)
+            benchdnn_attrs += f"--{e}={converters[e](attr)}"
     return benchdnn_attrs
 
 
@@ -610,8 +586,8 @@ class InputGenerator:
 
             case += ' ' + convert_engine(entry['engine'])
             # XXX: direction depends on mds (FWD_B is forward + defined bias md)
-            case += ' ' + convert_dir(entry)
-            case += ' ' + convert_alg(entry)
+            case += f' {convert_dir(entry)}'
+            case += f' {convert_alg(entry)}'
             if entry['prim_kind'] == 'matmul':
                 case += ' ' + convert_bias_mask(entry['mds'])
             # XXX: data types configuration is not unified across drivers

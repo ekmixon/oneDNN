@@ -27,7 +27,7 @@ for root, dirs, files in os.walk(DIR):
             # Temp file should be used in order to make files lowcased, because
             # direct renaming doesn't work due to case insensitive file system.
             if file.lower() != file:
-                tmp_file = "tmp_" + file
+                tmp_file = f"tmp_{file}"
                 os.rename(os.path.join(root, file), \
                         os.path.join(root, tmp_file))
                 os.rename(os.path.join(root, tmp_file), \

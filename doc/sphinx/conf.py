@@ -44,7 +44,7 @@ def whereis(binary):
 
 doxyrest_bin_path = whereis('doxyrest')
 doxyrest_dir_path = os.path.dirname(doxyrest_bin_path)
-doxyrest_share_path = doxyrest_dir_path + "/../share/doxyrest/sphinx"
+doxyrest_share_path = f"{doxyrest_dir_path}/../share/doxyrest/sphinx"
 sys.path.insert(1, os.path.abspath(doxyrest_share_path))
 
 
@@ -184,7 +184,7 @@ def fixFileNameRefs(app, env, docnames):
     for dirpath, dirnames, filenames in os.walk(targetDir):
         for filename in [f for f in filenames if f.endswith(fileExtension)]:
             filePath = os.path.join(dirpath,filename)
-            print("replacing strings in " + filePath)
+            print(f"replacing strings in {filePath}")
             outdata = None
             with open(filePath) as f:
                 read_data = f.read()
@@ -210,6 +210,6 @@ def addTocTrees(app, env, docnames):
         with open(rstFile, 'a+') as f:
             tocTree = '\n.. toctree::\n   :hidden:\n\n'
             for file in trees2Add[rstFile]:
-                tocTree += "   " + file + "\n"
+                tocTree += f"   {file}" + "\n"
             tocTree += "\n\n"
             f.write(tocTree)

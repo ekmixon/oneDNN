@@ -29,7 +29,7 @@ def get_version():
 
 def check_version():
     v = get_version()
-    if not (v['major'] >= 3 and v['minor'] >= 7):
+    if v['major'] < 3 or v['minor'] < 7:
         print("ERROR: unsupported python version")
         return status.get('FAILED')
     return status.get('SUCCESS')

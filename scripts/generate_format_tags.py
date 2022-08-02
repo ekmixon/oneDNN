@@ -34,22 +34,20 @@ def is_abc_tag(t):
         c = c.lower()
         if c.isdigit():
             continue
-        if c.isalpha():
-            if 'a' <= c and c <= 'l':
-                continue
+        if c.isalpha() and 'a' <= c <= 'l':
+            continue
         return False
     return True
 
 
 class Tag:
     def __init__(self, line):
-        m = re.match(r'\s*(\w+)\s*=\s*(\w+)', line)
-        if m:
-            self.lhs = m.group(1)
-            self.rhs = m.group(2)
+        if m := re.match(r'\s*(\w+)\s*=\s*(\w+)', line):
+            self.lhs = m[1]
+            self.rhs = m[2]
         else:
             m = re.match(r'\s*(\w+)', line)
-            self.lhs = m.group(1)
+            self.lhs = m[1]
             self.rhs = None
 
         self.is_special = is_special_tag(self.lhs)
@@ -57,7 +55,7 @@ class Tag:
         if self.is_special:
             self.rhs = None
         elif not self.rhs:
-            assert self.is_abc, ('Expected abc-tag: %s' % line)
+            assert self.is_abc, f'Expected abc-tag: {line}'
 
     def lhs_base_tag(self):
         for s in ['undef', 'any', 'last']:
@@ -87,8 +85,8 @@ for arg in sys.argv:
 
 script_root = os.path.dirname(os.path.realpath(__file__))
 
-dnnl_types_h_path = '%s/../include/oneapi/dnnl/dnnl_types.h' % script_root
-dnnl_hpp_path = '%s/../include/oneapi/dnnl/dnnl.hpp' % script_root
+dnnl_types_h_path = f'{script_root}/../include/oneapi/dnnl/dnnl_types.h'
+dnnl_hpp_path = f'{script_root}/../include/oneapi/dnnl/dnnl.hpp'
 
 c_tags = []
 cpp_tags = []
@@ -97,22 +95,18 @@ cpp_tags = []
 with open(dnnl_types_h_path) as f:
     s = f.read()
     m = re.search(r'.*enum(.*?)dnnl_format_tag_t', s, re.S)
-    lines = [l for l in m.group(1).split('\n') if l.strip().startswith('dnnl')]
-    for l in lines:
-        c_tags.append(Tag(l))
-
+    lines = [l for l in m[1].split('\n') if l.strip().startswith('dnnl')]
+    c_tags.extend(Tag(l) for l in lines)
 # Parse tags from dnnl.hpp
 with open(dnnl_hpp_path) as f:
     dnnl_hpp_contents = f.read()
     m = re.search(r'(enum class format_tag.*?)};', dnnl_hpp_contents, re.S)
-    dnnl_hpp_format_tag = m.group(1)
+    dnnl_hpp_format_tag = m[1]
     lines = [
         l for l in dnnl_hpp_format_tag.split('\n')
         if l.strip() and '=' in l.strip()
     ]
-    for l in lines:
-        cpp_tags.append(Tag(l))
-
+    cpp_tags.extend(Tag(l) for l in lines)
 # Validate dnnl.hpp tags
 for cpp_tag in cpp_tags:
     if cpp_tag.is_special:
@@ -120,8 +114,9 @@ for cpp_tag in cpp_tags:
     if cpp_tag.rhs:
         if cpp_tag.lhs_base_tag() == cpp_tag.rhs_base_tag():
             continue
-        tags = [t for t in c_tags if t.lhs_base_tag() == cpp_tag.lhs_base_tag()]
-        if tags:
+        if tags := [
+            t for t in c_tags if t.lhs_base_tag() == cpp_tag.lhs_base_tag()
+        ]:
             if cpp_tag.rhs_base_tag() == tags[0].rhs_base_tag():
                 continue
         print('Can\'t validate tag: %s' % cpp_tag)
@@ -136,7 +131,7 @@ for c_tag in c_tags:
     ]
     if not cpp_found:
         base = c_tag.lhs_base_tag()
-        line = '        %s = dnnl_%s,' % (base, base)
+        line = f'        {base} = dnnl_{base},'
         missing_dnnl_hpp_tag_lines.append(line)
 
 if not missing_dnnl_hpp_tag_lines:

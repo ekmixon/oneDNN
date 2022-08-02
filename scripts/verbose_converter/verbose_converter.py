@@ -37,12 +37,12 @@ def convert(verbose_level, parser, input, action, generator, split_output):
         logger.print("Error: unsupported parser", 'STDIO')
         return utils.status.get('FAILED')
 
-    logger.print(f'Processing input ...', 'INFO')
+    logger.print('Processing input ...', 'INFO')
     log_parser.process()
 
     output = None
     if action == 'dumpIR':
-        logger.print(f'Dumping data from input...', 'INFO')
+        logger.print('Dumping data from input...', 'INFO')
         log_parser.dump(True)
     if action == 'generate':
         if generator == 'benchdnn':
@@ -52,12 +52,12 @@ def convert(verbose_level, parser, input, action, generator, split_output):
             logger.print("Error: unsupported generator", 'STDIO')
             return utils.status.get('FAILED')
 
-        logger.print(f'Generating output ...', 'INFO')
+        logger.print('Generating output ...', 'INFO')
         output = gen.generate(log_parser.get_data(), split_output)
     return utils.status.get('SUCCESS'), output
 
 def validate_option(value, supported_values, str):
-    if not value in supported_values:
+    if value not in supported_values:
         print(f"ERROR: {str}")
         return utils.status.get('FAILED')
     return utils.status.get('SUCCESS')
@@ -128,8 +128,7 @@ def main():
     if args.input == 'stdin':
         # if no input was piped, skip reading
         if not sys.stdin.isatty():
-            for line in sys.stdin:
-                input_data.append(line)
+            input_data.extend(iter(sys.stdin))
         else:
             print("WARN: no input was provided to the script")
     else:
@@ -152,13 +151,12 @@ def main():
 
     if output != None:
         if args.output != 'stdout':
-            if output != None:
-                for key, value in output.items():
-                    filename = args.output
-                    if args.split == True:
-                        filename += '.' + key
-                    of = open(filename, 'w')
-                    print(value, end='', file=of)
+            for key, value in output.items():
+                filename = args.output
+                if args.split == True:
+                    filename += f'.{key}'
+                of = open(filename, 'w')
+                print(value, end='', file=of)
         else:
             for key, value in output.items():
                 if args.split == False:

@@ -109,9 +109,7 @@ class LogParser:
                 def convert_structure_to_ir_seq(ir, value):
                     params = value.split(':')
                     fields = list(ir.keys())
-                    ir.update(
-                        (fields[i], params[i])
-                        for i in range(0, min(len(params), len(fields))))
+                    ir.update((fields[i], params[i]) for i in range(min(len(params), len(fields))))
                     return ir
 
                 def convert_post_ops(value):
@@ -176,7 +174,7 @@ class LogParser:
                     entries = value.split('+')
                     postops = []
                     for e in entries:
-                        for k in convert.keys():
+                        for k in convert:
                             if k in e:
                                 cvt = convert.get(k)
                                 postops.append(cvt(e))
@@ -218,7 +216,7 @@ class LogParser:
                     'attr-scratchpad': convert_scratchpad_mode
                 }
                 attrs = {}
-                for e in converters.keys():
+                for e in converters:
                     attr = extract_attr(exts, e)
                     if attr != '':
                         attrs[e] = converters[e](attr)
@@ -277,8 +275,8 @@ class LogParser:
             return entry
 
         verbose_template = "onednn_verbose,operation,engine,primitive," + \
-            "implementation,prop_kind,memory_descriptors,attributes," + \
-            "auxiliary,problem_desc"
+                "implementation,prop_kind,memory_descriptors,attributes," + \
+                "auxiliary,problem_desc"
 
         i = len(self.__data)
         for line in self.__input:

@@ -43,13 +43,11 @@ def convert_dir_benchdnn2verbose(dir):
 
 
 def generate_verbose(path_to_benchdnn, driver, batch):
-    benchdnn_exe = path_to_benchdnn + '/benchdnn'
+    benchdnn_exe = f'{path_to_benchdnn}/benchdnn'
     sub_env = os.environ.copy()
     sub_env['ONEDNN_VERBOSE'] = '1'
     sub_env['ONEDNN_PRIMITIVE_CACHE_CAPACITY'] = '0'
-    sub_args = [
-        benchdnn_exe, f"--{driver}", f"--mode=R", f"-v1", f"--batch={batch}"
-    ]
+    sub_args = [benchdnn_exe, f"--{driver}", "--mode=R", "-v1", f"--batch={batch}"]
     try:
         sub = subprocess.run(sub_args,
                              capture_output=True,
@@ -57,14 +55,16 @@ def generate_verbose(path_to_benchdnn, driver, batch):
                              env=sub_env)
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
         return [
-            status.get('FAILED'), f"subprocess.run() raised exception: " + \
-                f"{e.stdout}"
+            status.get('FAILED'),
+            ("subprocess.run() raised exception: " + f"{e.stdout}"),
         ], ""
+
     except BaseException as e:
         return [
-            status.get('FAILED'), f"subprocess.run() raised exception: " + \
-                f"{e.args}\n{e.stdout}"
+            status.get('FAILED'),
+            ("subprocess.run() raised exception: " + f"{e.args}\n{e.stdout}"),
         ], ""
+
     if sub.returncode != 0:
         # most likely converter generated incorrect batch file
         return [status.get('FAILED'), \
@@ -110,7 +110,7 @@ def generate_verbose(path_to_benchdnn, driver, batch):
                 continue
 
             # remove time
-            l_wo_time = "".join(f + ',' for f in l.split(',')[0:-1])[0:-1]
+            l_wo_time = "".join(f'{f},' for f in l.split(',')[:-1])[:-1]
 
             v += l_wo_time + '\n'
 
@@ -131,10 +131,10 @@ def generate_batch(verbose, driver):
     filename = "test.generated"
     for key, value in data.items():
         # remove -- from driver name
-        driver_filename = key + '.' + filename
+        driver_filename = f'{key}.{filename}'
         of = open(driver_filename, 'w')
         print(value, file=of)
-    return [s, ''], driver + '.' + filename
+    return [s, ''], f'{driver}.{filename}'
 
 
 def compare(driver, ref_v, comp_v):
@@ -180,32 +180,38 @@ def test(path_to_benchdnn, driver, batch):
 def main():
     realpath = os.path.dirname(os.path.realpath(__file__))
     print(realpath)
-    realpath_benchdnn = realpath + '/../../../build/tests/benchdnn'
+    realpath_benchdnn = f'{realpath}/../../../build/tests/benchdnn'
     args_parser = argparse.ArgumentParser(description='benchdnn test',
                                           formatter_class=RawTextHelpFormatter)
-    args_parser.add_argument('-d',
-                             '--dataset',
-                             default=realpath + '/' + 'dataset_simple',
-                             help='input with benchdnn batch files')
+    args_parser.add_argument(
+        '-d',
+        '--dataset',
+        default=f'{realpath}/dataset_simple',
+        help='input with benchdnn batch files',
+    )
+
     args_parser.add_argument('-b',
                              '--benchdnn_path',
                              default=realpath_benchdnn,
                              help='Path to benchdnn executable')
-    args_parser.add_argument('-i',
-                             '--inputs_path',
-                             default=realpath_benchdnn + '/' + 'inputs',
-                             help='Path to benchdnn batch files')
+    args_parser.add_argument(
+        '-i',
+        '--inputs_path',
+        default=f'{realpath_benchdnn}/inputs',
+        help='Path to benchdnn batch files',
+    )
+
     args = args_parser.parse_args()
 
     with open(args.dataset, 'r') as dataset:
-        for case in dataset.readlines():
-            if case[0] != '#' and case[0] != '\n':
+        for case in dataset:
+            if case[0] not in ['#', '\n']:
                 [driver, batch] = case.split(',')
                 batch = batch.split('\n')[0]
-                batch_file_path = args.inputs_path + '/' + driver + '/' + batch
+                batch_file_path = f'{args.inputs_path}/{driver}/{batch}'
                 s = test(args.benchdnn_path, driver, batch_file_path)
                 s_str = 'PASSED' if s[0] == status.get('SUCCESS') else 'FAILED'
-                print(f"BENCHDNN TEST: {driver}, {batch}: {s_str} " + s[1])
+                print(f"BENCHDNN TEST: {driver}, {batch}: {s_str} {s[1]}")
 
     return status.get('SUCCESS')
 
